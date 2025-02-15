@@ -34,6 +34,22 @@ Une fois l'environnement virtuelle activé, on peut installer les différents d�
 pip install -r requirements.txt
 ```
 
+Étape 2:
+
+Nous utilisons `schtasks` pour exécuter le script chaque jour à 08h00 du matin :
+```powershell
+schtasks /create /tn "FetchAPIData" /tr "\"C:\\Users\\Clayton\\git\\technical-test-data-engineer\\venv\\Scripts\\python.exe\" \"C:\\Users\\Clayton\\git\\technical-test-data-engineer\\src\\moovitamix_fastapi\\fetch_and_save.py\"" /sc daily /st 08:00 /F
+```
+
+Nous pouvons s'assurer que la tâche a bien été créée avec cette commande:
+
+```powershell
+schtasks /query /tn "FetchAPIData"
+```
+Si tout fonctionne correctement, les fichiers CSV seront mis à jour dans le dossier datas.
+
+Étape 3
+
 
 ## Questions (étapes 4 à 7)
 
