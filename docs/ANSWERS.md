@@ -2,8 +2,6 @@
 
 ## _Utilisation de la solution (étape 1 à 3)_
 
-_Inscrire la documentation technique_
-
 ### **Étape 1 : Création de l'environnement virtuel**
 Pour la création de l'environnement virtuel, nous avons fait différentes commandes pour faire le tout.
 
@@ -22,7 +20,7 @@ Cette commande créera un nouveau dossier venv avec plusieurs documents différe
 ```powershell
 venv\Scripts\activate
 ```
-    Il est possible que par défaut, il y a une politique d’exécution des scripts sous PowerShell, alors Windows bloque l'exécution des fichiers .ps1. Il faut donc autoriser temporairement l'exécution des scripts
+**Il est possible que par défaut, il y a une politique d’exécution des scripts sous PowerShell, alors Windows bloque l'exécution des fichiers .ps1. Il faut donc autoriser temporairement l'exécution des scripts**
 
 ```powershell
 Set-ExecutionPolicy Unrestricted -Scope Process
@@ -34,11 +32,25 @@ Une fois l'environnement virtuelle activé, on peut installer les différents d�
 pip install -r requirements.txt
 ```
 
-Étape 2:
+
+### **Étape 2:**
+Pour récupérer quotidiennement les données de l'API, on crée le fichier fetch_data, où nous retrouvons 3 méthodes dans ce script qui va s'exécuter quotidiennement. La première méthode `start_server`, s'assure que le serveur est lancé, et s'il ne l'est pas, on exécute la commande:
+
+```powershell
+python -m uvicorn main:app
+```
+
+Par la suite, la 2e méthode `fetch_data` récupère les données de FASTAPI en effectuant une requête HTTP GET à l'URL fournie en paramètre. On vérifie si la réponse a un code de statut 200 (succès), si oui, on retourne la liste des éléments dans la réponse JSON. Par contre Si la requête échoue, affiche un message d'erreur avec le code HTTP et retourne une liste vide. La 3e fonction enregistre les données sous forme de fichier CSV dans un dossier nommé datas.
+Dans le main, on exécute ces fonctions une à la suite de l'autre pour les 3 différents endpoints qui sont `Users`, `Tracks` et `ListenHistory`.
 
 Nous utilisons `schtasks` pour exécuter le script chaque jour à 08h00 du matin :
 ```powershell
-schtasks /create /tn "FetchAPIData" /tr "\"C:\\Users\\Clayton\\git\\technical-test-data-engineer\\venv\\Scripts\\python.exe\" \"C:\\Users\\Clayton\\git\\technical-test-data-engineer\\src\\moovitamix_fastapi\\fetch_and_save.py\"" /sc daily /st 08:00 /F
+schtasks /create /tn "FetchAPIData" /tr "/path/to/venv/bin/python /path/to/fetch_data.py" /sc daily /st 08:00
+```
+
+**Si nous utilisons Linux/macOS, on exécuterait cette commande:**
+```powershell
+0 8 * * * /path/to/venv/bin/python /path/to/fetch_data.py
 ```
 
 Nous pouvons s'assurer que la tâche a bien été créée avec cette commande:
@@ -48,22 +60,50 @@ schtasks /query /tn "FetchAPIData"
 ```
 Si tout fonctionne correctement, les fichiers CSV seront mis à jour dans le dossier datas. Il faut un serveur toujours actif.
 
-Étape 3:
 
-Pour s'assurer que le pipeline de récupération de données fonctionne correctement, nous avons ajouté des tests unitaires avec `pytest`
+### **Étape 3:**
 
+Pour s'assurer que le pipeline de récupération de données fonctionne correctement, nous avons ajouté des tests unitaires avec `pytest`. On ajoute le module `requests-mock` dans requirements.txt pour simuler des requêtes HTTP pour tester fetch_data sans appeler une vraie API aussi besoin pour les tests.
+
+La commande executé est:
+
+```powershell
+pytest test/unit/
+```
+
+**Il est possible que la commande ne fonctionne puisque le module moovitamix_fastapi n'est pas reconnu, il est à ce moment nécessaire d'exécuter cette commande:**
+
+```powershell
 $env:PYTHONPATH = "$PWD\src"
+```
 
-- 
+Ainsi, nous avons au total 6 tests unitaires au total:
 
-Ensuite nous avons ajout la configuration pour avoir un pre-commit. Ainsi, à chaque commit, pytest sera automatiquement exécuté pour tous les tests unitaires
+1. **test_fetch_data_tracks()**
+- Vérifier que fetch_data() récupère correctement les données des chansons et respecte le modèle TracksOut
 
----
+2. **test_fetch_data_users()**
+- Vérifier que fetch_data() récupère correctement les données des utilisateurs et respecte le modèle UsersOut.
+
+3. **test_fetch_data_listen_history()**
+- Vérifier que fetch_data() récupère l'historique d'écoute et respecte le modèle ListenHistoryOut
+
+4. **test_fetch_data_empty()**
+- Vérifier que fetch_data() gère correctement une API renvoyant une liste vide
+
+5. **test_fetch_data_error()**
+- Vérifier que fetch_data() gère correctement une erreur HTTP
+
+6. **test_save_to_csv()**
+- Vérifier que save_to_csv() crée un fichier CSV valide avec le bon contenu.
+
+
+Ensuite nous avons ajouter la configuration pour avoir un pre-commit. Ainsi, à chaque commit, on aura l'automatisation pour tous les tests unitaires. Si l’un des tests échoue, le commit est annulé, obligeant ainsi le développeur à corriger les erreurs avant d’enregistrer ses modifications dans Git. Ainsi, on empêche l’ajout de code cassé dans le dépôt Git et plus besoin d’exécuter manuellement les tests avant chaque commit.
+
 
 ## Questions (étapes 4 à 7)
 
-### Étape 4
-
+### **Étape 4:**
 ![alt text](images/schema_Q4_MOOVAI.jpg)
 
 Voici mon schéma de base de données que j'utiliserais pour stocker les informations récupérés des trois sources données. La table `Users` possède les différents attributs ainsi qu'une clé primaire qui est le id de chacun des users. Par la suite, la table `Tracks` possède les différents attributs de la chanson ainsi qu'une clé primaire qui est le id. Pour la table `ListenHistory`, elle fait la relation entre `Users` et `Tracks`. La table joue le rôle d'être une table de jointure entre les 2 tables qui est une relation "many-to-many", ce qui veut dire que un utilisateur écoute plusieurs chansons et qu'une chanson est écoutée par plusieurs utilisateurs. Ainsi, comme affiché dans le schéma, on aurait un clé étrangère venant de la table `Users` ainsi qu'une clé étrangère de la Table `Tracks`. La clé primaire sera l'unicité des deux clés étrangères ensemble.
@@ -72,8 +112,8 @@ Je recommanderais comme système de base de données PostgreSQL pour ainsi avoir
 
 À long terme, si nous envisageons avoir des gros volumes de donnée, PostgreSQL possède de l'indexation avancé pour une meilleur performance et le partage de charge avec des indexes et partitions pour accélérer les requêtes sur de gros volumes de données.
 
-### Étape 5
 
+### **Étape 5:**
 
 Pour assurer un suivi efficace du pipeline de données, nous utilisons `AWS CloudWatch` afin de collecter, analyser et visualiser les métriques essentielles en temps réel. CloudWatch permet de détecter rapidement les anomalies, d'envoyer des alertes automatiques en cas d’échec et d’optimiser la performance du pipeline.
 
@@ -84,10 +124,10 @@ En complément, une table spécifique pipeline_monitoring est intégrée dans la
 - Performance – Temps d’exécution (s) : Suivi du temps moyen d’exécution des jobs pour détecter les ralentissements.
 - Volume – Nombre de lignes traitées : Permet de repérer des anomalies en identifiant des variations inattendues du volume de données ingérées.
 
-### Étape 6
+### **Étape 6**
 
-_votre réponse ici_
+Pour automatiser le calcul de recommandation, ma solution serait d'avoir un pipeline qui fera un traitement de données et un système de recommandation. Par le schéma, la première étape du pipeline serait de collecter, nettoyer et traitrer les données avec un script Python utilisant le dépendance pandas. Par la suite, on aura la génération des recommandations avec un algorithme de recommandation basé sur le filtrage collaboratif. À cette étape, nous utiliserons Scikit-learn. Une fois que la prédiction des morceaux pour chaque utilisateur est réalisé, nous voulons sauvegarder les recommandations dans une table de user_recommandation. Nous utiliserons task scheduler, schtasks, pour s'assurer quee le tout s'exécute quotidiennement à la suite de l'étape 2. 
 
 ### Étape 7
 
-_votre réponse ici_
+Pour automatiser le réentraînement du modèle de recommandation, il est essentiel de mettre en place un pipeline automatisé qui gère l'extraction des nouvelles interactions utilisateur-chanson, le prétraitement des données et la mise à jour du modèle. La première étape consiste à programmer un job via AWS Lambda afin d’exécuter le réentraînement du modèle à une fréquence définie, comme une fois par semaine. Ensuite, nous extrairons les nouvelles interactions utilisateur-chanson et effectuerons un nettoyage et un formatage des données pour garantir leur qualité. Une fois ces données préparées, elles seront utilisées pour réentraîner le modèle en utilisant Scikit-learn. La performance du nouveau modèle sera comparée à celle du modèle précédent afin de s’assurer qu’il apporte une meilleure précision. Si le modèle réentraîné est plus performant, il sera automatiquement déployé pour remplacer l'ancien modèle en production, garantissant ainsi des recommandations optimisées et à jour pour les utilisateurs.
