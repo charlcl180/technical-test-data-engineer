@@ -50,7 +50,7 @@ schtasks /create /tn "FetchAPIData" /tr "/path/to/venv/bin/python /path/to/fetch
 
 **Si nous utilisons Linux/macOS, on exécuterait cette commande:**
 ```powershell
-0 8 * * * /path/to/venv/bin/python /path/to/fetch_data.py
+crontab -e 0 8 * * * /path/to/venv/bin/python /path/to/fetch_data.py
 ```
 
 Nous pouvons s'assurer que la tâche a bien été créée avec cette commande:
@@ -115,9 +115,9 @@ Je recommanderais comme système de base de données PostgreSQL pour ainsi avoir
 
 ### **Étape 5:**
 
-Pour assurer un suivi efficace du pipeline de données, nous utilisons `AWS CloudWatch` afin de collecter, analyser et visualiser les métriques essentielles en temps réel. CloudWatch permet de détecter rapidement les anomalies, d'envoyer des alertes automatiques en cas d’échec et d’optimiser la performance du pipeline.
+Pour assurer un suivi du pipeline de données, nous utilisons `AWS CloudWatch` afin de collecter, analyser et visualiser les métriques essentielles en temps réel. CloudWatch nous permettra de détecter rapidement les anomalies, d'envoyer des alertes automatiques en cas d’échec et d’optimiser la performance du pipeline.
 
-En complément, une table spécifique pipeline_monitoring est intégrée dans la base de données pour stocker l’historique des exécutions. Cette table enregistre les métriques clés suivantes :
+En complément, une table spécifique pipeline_monitoring serait intégrée dans la base de données pour stocker l’historique des exécutions. Cette table enregistre les métriques clés suivantes :
 
 - Disponibilité – Taux de succès (%) : Mesure le pourcentage de jobs exécutés avec succès.
 - Fiabilité – Taux d’échec (%) : Indique le pourcentage de jobs ayant échoué, permettant d’identifier les pannes récurrentes.
@@ -125,9 +125,12 @@ En complément, une table spécifique pipeline_monitoring est intégrée dans la
 - Volume – Nombre de lignes traitées : Permet de repérer des anomalies en identifiant des variations inattendues du volume de données ingérées.
 
 ### **Étape 6**
+![alt text](images/schema_Q6_MOOVAI.jpg)
 
-Pour automatiser le calcul de recommandation, ma solution serait d'avoir un pipeline qui fera un traitement de données et un système de recommandation. Par le schéma, la première étape du pipeline serait de collecter, nettoyer et traitrer les données avec un script Python utilisant le dépendance pandas. Par la suite, on aura la génération des recommandations avec un algorithme de recommandation basé sur le filtrage collaboratif. À cette étape, nous utiliserons Scikit-learn. Une fois que la prédiction des morceaux pour chaque utilisateur est réalisé, nous voulons sauvegarder les recommandations dans une table de user_recommandation. Nous utiliserons task scheduler, schtasks, pour s'assurer quee le tout s'exécute quotidiennement à la suite de l'étape 2. 
+Pour automatiser le calcul de recommandation, ma solution serait d'avoir un pipeline qui fera un traitement de données et un système de recommandation. Par le schéma, le script fetch_data.py récupère les données depuis une API FastAPI et les stocke sous forme de fichiers CSV. Ensuite, clean_data.py, en utilisant Pandas, nettoie et transforme ces données pour les rendre utilisables. Cela veut dire que le script s'occupe du filtrage des valeurs manquantes, de la normalisation et de la préparation des features.
 
-### Étape 7
+Par la suite, on aura la génération des recommandations avec un algorithme de recommandation basé sur le filtrage collaboratif. À cette étape, nous utiliserons Scikit-learn. Une fois que la prédiction des morceaux pour chaque utilisateur est réalisé, nous voulons sauvegarder les recommandations dans une table de user_recommandation avec la base données mentionné plus haut, PostgreSQL. Nous utiliserons task scheduler, schtasks, pour s'assurer quee le tout s'exécute hebdomadairement à chaque dimanche soir. 
 
-Pour automatiser le réentraînement du modèle de recommandation, il est essentiel de mettre en place un pipeline automatisé qui gère l'extraction des nouvelles interactions utilisateur-chanson, le prétraitement des données et la mise à jour du modèle. La première étape consiste à programmer un job via AWS Lambda afin d’exécuter le réentraînement du modèle à une fréquence définie, comme une fois par semaine. Ensuite, nous extrairons les nouvelles interactions utilisateur-chanson et effectuerons un nettoyage et un formatage des données pour garantir leur qualité. Une fois ces données préparées, elles seront utilisées pour réentraîner le modèle en utilisant Scikit-learn. La performance du nouveau modèle sera comparée à celle du modèle précédent afin de s’assurer qu’il apporte une meilleure précision. Si le modèle réentraîné est plus performant, il sera automatiquement déployé pour remplacer l'ancien modèle en production, garantissant ainsi des recommandations optimisées et à jour pour les utilisateurs.
+### **Étape 7**
+
+Pour automatiser le réentraînement du modèle de recommandation, il est essentiel de mettre en place un pipeline automatisé qui gère l'extraction des nouvelles interactions utilisateur-chanson, le prétraitement des données et la mise à jour du modèle. Pour la première étape, on aurait l'implémentation d'un job via AWS Lambda afin d’exécuter le réentraînement du modèle à une fréquence définie, comme une fois par semaine. On utilise aussi AWS Step Functions permettant d'avoir plusieurs tâches dans un flux de travail et par AWS CloudWatch Events qui va nous permettre de planifier des exécutions périodiques. Ensuite, nous extrairons les nouvelles données des 3 endpoints et effectuerons un nettoyage et un formatage des données pour garantir leur qualité. Une fois ces données préparées, elles seront utilisées pour réentraîner le modèle en utilisant Scikit-learn. La performance du nouveau modèle sera comparée à celle du modèle précédent afin de s’assurer qu’il apporte une meilleure précision. Si le modèle réentraîné est plus performant, il sera automatiquement déployé pour remplacer l'ancien modèle en production, garantissant ainsi des recommandations optimisées et à jour pour les utilisateurs.
