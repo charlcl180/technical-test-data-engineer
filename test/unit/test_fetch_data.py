@@ -14,9 +14,9 @@ def test_fetch_data_tracks():
     """Test que fetch_data() récupère bien les données des tracks et respecte la structure de TracksOut."""
     with requests_mock.Mocker() as m:
         fake_response = [{
-            "id": 1, "name": "Song A", "artist": "Artist A",
-            "songwriters": "Writer A", "duration": "03:45",
-            "genres": "Pop", "album": "Album A",
+            "id": 1, "name": "One dance", "artist": "Drake",
+            "songwriters": "Ghost Writer", "duration": "02:45",
+            "genres": "HipHop", "album": "Views",
             "created_at": "2024-02-01T12:00:00", "updated_at": "2024-02-05T15:00:00"
         }]
         m.get(f"{BASE_URL}/tracks", json={"items": fake_response})
@@ -28,8 +28,8 @@ def test_fetch_data_tracks():
         # Vérification avec le modèle TracksOut
         track = TracksOut(**data[0])
         assert isinstance(track, TracksOut)
-        assert track.name == "Song A"
-        assert track.artist == "Artist A"
+        assert track.name == "One dance"
+        assert track.artist == "Drake"
 
 def test_fetch_data_users():
     """Test que fetch_data() récupère bien les données des ussers et respecte la structure de UsersOut."""
@@ -97,8 +97,8 @@ def test_fetch_data_error():
 def sample_data():
     """Données factices pour le test"""
     return [
-        {"id": 1, "name": "Song A", "artist": "Artist A"},
-        {"id": 2, "name": "Song B", "artist": "Artist B"}
+        {"id": 1, "name": "Song 1", "artist": "Artist 1"},
+        {"id": 2, "name": "Song 2", "artist": "Artist 2"}
     ]
 
 def test_save_to_csv(sample_data, tmp_path):
@@ -124,5 +124,5 @@ def test_save_to_csv(sample_data, tmp_path):
 
     assert len(rows) == len(sample_data)  # Vérifie que toutes les lignes sont présentes
     assert rows[0]["id"] == "1"  # Vérifie la première ligne (CSV stocke tout en string)
-    assert rows[0]["name"] == "Song A"
-    assert rows[0]["artist"] == "Artist A"
+    assert rows[0]["name"] == "Song 1"
+    assert rows[0]["artist"] == "Artist 1"
