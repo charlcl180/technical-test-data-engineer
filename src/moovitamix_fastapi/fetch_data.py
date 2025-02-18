@@ -1,3 +1,5 @@
+import subprocess
+import time
 import requests
 import csv
 import os
@@ -12,6 +14,21 @@ ENDPOINTS = {
     "listen_history": f"{BASE_URL}/listen_history"
 }
 
+def start_server():
+    """Démarre le serveur FastAPI si ce n'est pas déjà fait."""
+    try:
+        response = requests.get(BASE_URL)
+        if response.status_code == 200:
+            print("Le serveur FastAPI est déjà en cours d'exécution.")
+            return
+    except requests.exceptions.ConnectionError:
+        print("Démarrage du serveur FastAPI...")
+    
+    subprocess.Popen(["C:\\Users\\Clayton\\git\\technical-test-data-engineer\\venv\\Scripts\\python.exe", "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"], cwd="src/moovitamix_fastapi")
+    
+    # Attendre que le serveur démarre
+    time.sleep(5)
+
 def fetch_data(endpoint):
     
     response = requests.get(endpoint)
@@ -23,8 +40,14 @@ def fetch_data(endpoint):
 
 
 def save_to_csv(data, filename, fieldnames):
-    filepath = os.path.join("datas", filename)
-    
+
+    SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))  # = src/moovitamix_fastapi
+    DATA_DIR = os.path.join(SCRIPT_DIR, "datas")  # Assure que datas/ est bien dans src/moovitamix_fastapi
+
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    filepath = os.path.join(DATA_DIR, filename)
+   
     with open(filepath, mode="w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
@@ -33,6 +56,7 @@ def save_to_csv(data, filename, fieldnames):
     print(f"Données enregistrées!")
 
 if __name__ == "__main__":
+    start_server()
 
     # Récupérer les chansons
     tracks_data = fetch_data(ENDPOINTS["tracks"])
