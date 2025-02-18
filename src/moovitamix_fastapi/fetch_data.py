@@ -6,7 +6,6 @@ import os
 from datetime import datetime
 
 # Définir les URLs des endpoints
-#test
 BASE_URL = "http://127.0.0.1:8000"
 ENDPOINTS = {
     "tracks": f"{BASE_URL}/tracks",

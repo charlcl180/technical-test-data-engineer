@@ -5,4 +5,3 @@ fastapi_pagination
 pytest
 requests
 requests-mock
-pre-commit
